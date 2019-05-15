@@ -73,7 +73,7 @@ public class Converter {
 			    System.out.println( "Transforming "+theFile.getName()+"...");
           Element result = Xml.transform(mdXml, "schemas/iso19115-3/src/main/plugin/iso19115-3/convert/ISO19139/fromISO19139MCP2.xsl",  xsltparams);
 
-          System.out.println("Result was \n"+Xml.getString(result));
+          //System.out.println("Result was \n"+Xml.getString(result));
 
           // validate
           boolean xmlIsValid = true;
@@ -87,7 +87,7 @@ public class Converter {
 
           // output
           String outputFile = path;
-          if (xmlIsValid) {
+          if (!xmlIsValid) {
             outputFile += "invalid" + File.separator;
           } 
           outputFile += theFile.getName();
