@@ -17,9 +17,24 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 
+import au.csiro.mcp2to191152018.utils.Xml;
+import au.csiro.mcp2to191152018.utils.XmlResolver;
+import jeeves.JeevesJCS;
+
 public class Converter {
 
   public static void main( String args[] ){
+
+    String schemaPath = "schemas/iso19115-3/src/main/plugin/iso19115-3/schema.xsd";
+
+    String oasisCatalogFile = "schemas/iso19115-3/src/main/plugin/iso19115-3/oasis-catalog.xml";
+
+    try {
+      JeevesJCS.setConfigFilename("src/main/config/cache.ccf");
+      JeevesJCS.getInstance(XmlResolver.XMLRESOLVER_JCS);
+    } catch (Exception ce) {
+      System.err.println("Failed to create cache for schema files");
+    }
 
     Options options = new Options();
     options.addOption("s", false, "Skip validation. Useful for debugging because reading the schemas takes some time.");
@@ -56,6 +71,9 @@ public class Converter {
     // creates both output directory and invalid directory if they don't exist
     op.mkdirs(); 
 
+    System.setProperty("XML_CATALOG_FILES", oasisCatalogFile);
+    Xml.resetResolver();
+
 		// Fetch list of input files from input directory
     File[] files = indirectory.listFiles(new FilenameFilter() {
          public boolean accept(File dir, String name) {
@@ -82,7 +100,13 @@ public class Converter {
 					  System.out.println("Validation is skipped.");
           } else {
 					  System.out.println("Validating '" + theFile.getName() + "' against http://schemas.isotc211.org/19115/-3/mdb/2.0 :" );
-					  xmlIsValid = ISO19115Validator.isValid( Xml.getString(result) );
+            try {
+              //Xml.validate(schemaPath, result);
+              Xml.validate(result);
+            } catch (Exception e) {
+              System.out.println(e.getMessage());
+              xmlIsValid = false;
+            }
           }
 
           // output

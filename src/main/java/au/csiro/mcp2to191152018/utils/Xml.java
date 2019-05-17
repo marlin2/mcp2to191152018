@@ -17,7 +17,7 @@
  * OF LIABILITY, ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE,
  * EVEN IF CSIRO HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
-package au.csiro.mcp2to191152018;
+package au.csiro.mcp2to191152018.utils;
 
 import net.sf.saxon.Configuration;
 import net.sf.saxon.FeatureKeys;
@@ -33,6 +33,10 @@ import org.jdom.transform.JDOMResult;
 import org.jdom.transform.JDOMSource;
 import org.jdom.xpath.XPath;
 import org.jdom.output.SAXOutputter;
+
+import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
+import org.xml.sax.helpers.DefaultHandler;
 
 import java.io.File;
 import java.io.InputStream;
@@ -59,14 +63,39 @@ import javax.xml.validation.ValidatorHandler;
 
 public class Xml {
 
+  private static SAXBuilder getSAXBuilder(boolean validate) {
+    SAXBuilder builder = getSAXBuilderWithoutXMLResolver(validate);
+        Resolver resolver = ResolverWrapper.getInstance();
+        builder.setEntityResolver(resolver.getXmlResolver());
+        return builder;
+  }
+
+    private static SAXBuilder getSAXBuilderWithoutXMLResolver(boolean validate) {
+        //SAXBuilder builder = new JeevesSAXBuilder(validate);
+        SAXBuilder builder = new SAXBuilder(validate);
+        builder.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        return builder;
+    }
+
 	public static Element loadString(String data, boolean validate)
 												throws IOException, JDOMException
 	{
-		SAXBuilder builder = new SAXBuilder(validate);
+		SAXBuilder builder = getSAXBuilderWithoutXMLResolver(validate);
 		Document   jdoc    = builder.build(new StringReader(data));
 
 		return (Element) jdoc.getRootElement().detach();
 	}
+
+  public static Element loadStream(InputStream input) throws IOException, JDOMException
+  {
+    SAXBuilder builder = getSAXBuilderWithoutXMLResolver(false); //new SAXBuilder();
+    builder.setFeature("http://apache.org/xml/features/validation/schema",false);
+    builder.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd",false);
+    builder.setExpandEntities(false);
+    Document   jdoc    = builder.build(input);
+
+    return (Element) jdoc.getRootElement().detach();
+  }
 
 	//---------------------------------------------------------------------------
 
@@ -75,6 +104,12 @@ public class Xml {
 
 		return outputter.outputString(data);
 	}
+
+  public static String getString(Document data) {
+    XMLOutputter outputter = new XMLOutputter(Format.getPrettyFormat());
+
+    return outputter.outputString(data);
+  }
 
 	//---------------------------------------------------------------------------
 
@@ -201,28 +236,57 @@ public class Xml {
 
 	//---------------------------------------------------------------------------
 
+  public synchronized static void validate(Element xml) throws Exception {
+    Schema schema = factory().newSchema();
+    ErrorHandler eh = new ErrorHandler();
+    validateRealGuts(schema, xml, eh);
+    if (eh.errors()) {
+      Element xsdXPaths = eh.getXPaths();
+      throw new Exception("XSD Validation error(s):\n"+getString(xsdXPaths));
+    }
+  }
+
 	public static void validate(String schemaPath, Element xml) throws Exception {
-		StreamSource schemaFile = new StreamSource(new File(schemaPath));
-		validateStreamSource(schemaFile, xml);
+    Element xsdXPaths = validateInfo(schemaPath,xml);
+    if (xsdXPaths != null && xsdXPaths.getContent().size() > 0) throw new Exception("XSD Validation error(s):\n"+getString(xsdXPaths));
 	}
 
 	//---------------------------------------------------------------------------
 
-	public static void validateSchemaFromJar(String schemaPath, Element xml) throws Exception {
-		URL url = Xml.class.getClassLoader().getResource(schemaPath);
-		StreamSource schemaFile = new StreamSource(url.toString());
-		validateStreamSource(schemaFile, xml);
-	}
+  public static Element validateInfo(String schemaPath, Element xml) throws Exception
+  {
+    ErrorHandler eh = new ErrorHandler();
+    validateGuts(schemaPath, xml, eh);
+    if (eh.errors()) {
+      return eh.getXPaths();
+    } else {
+      return null;
+    }
+  }
 
 	//---------------------------------------------------------------------------
 
-	private static void validateStreamSource(StreamSource schemaFile, Element xml) throws Exception {
-		Schema schema = factory().newSchema(schemaFile);
-		ValidatorHandler vh = schema.newValidatorHandler();
+  private static void validateGuts(String schemaPath, Element xml, ErrorHandler eh) throws Exception {
+    StreamSource schemaFile = new StreamSource(new File(schemaPath));
+    Schema schema = factory().newSchema(schemaFile);
+    validateRealGuts(schema, xml, eh);
+  }
 
-		SAXOutputter so = new SAXOutputter(vh);
-		so.output(xml);
-	} 
+	//---------------------------------------------------------------------------
+
+  private static void validateRealGuts(Schema schema, Element xml, ErrorHandler eh) throws Exception {
+
+    Resolver resolver = ResolverWrapper.getInstance();
+
+    ValidatorHandler vh = schema.newValidatorHandler();
+    vh.setResourceResolver(resolver.getXmlResolver());
+    vh.setErrorHandler(eh);
+
+    SAXOutputter so = new SAXOutputter(vh);
+    eh.setSo(so);
+
+    so.output(xml);
+  }
 
 	//---------------------------------------------------------------------------
 
@@ -230,4 +294,105 @@ public class Xml {
 		return SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
 	}
 
+	//---------------------------------------------------------------------------
+
+    /**
+     * Error handler that collects up validation errors.
+     *
+     */
+	public static class ErrorHandler extends DefaultHandler {
+
+		private int errorCount = 0;
+		private Element xpaths;
+		private Namespace ns = Namespace.NO_NAMESPACE;
+		private SAXOutputter so;
+		
+		public void setSo(SAXOutputter so) {
+			this.so = so;
+		}
+		
+		public boolean errors() {
+			return errorCount > 0;
+		}
+
+		public Element getXPaths() {
+			return xpaths;
+		}
+
+		public void addMessage ( SAXParseException exception, String typeOfError ) {
+			if (errorCount == 0) xpaths = new Element("xsderrors", ns);
+			errorCount++;
+
+			Element elem = (Element) so.getLocator().getNode();
+			Element x = new Element("xpath", ns);
+			try {
+				String xpath = au.csiro.mcp2to191152018.utils.XPath.getXPath(elem);
+				//-- remove the first element to ensure XPath fits XML passed with
+				//-- root element
+				if (xpath.startsWith("/")) { 
+					int ind = xpath.indexOf('/',1);
+					if (ind != -1) {
+						xpath = xpath.substring(ind+1);
+					} else {
+						xpath = "."; // error to be placed on the root element
+					}
+				}
+				x.setText(xpath);
+			} catch (JDOMException e) {
+				e.printStackTrace();
+				x.setText("nopath");
+			}
+			String message = exception.getMessage() + " (Element: " + elem.getQualifiedName();
+			String parentName;
+			if (!elem.isRootElement()) {
+				Element parent = (Element)elem.getParent();
+				if (parent != null)
+					parentName = parent.getQualifiedName();
+				else
+					parentName = "Unknown";
+			} else {
+				parentName = "/";
+			}
+			message += " with parent element: " + parentName + ")";
+			
+			Element m = new Element("message", ns).setText(message);
+			Element errorType = new Element("typeOfError", ns).setText(typeOfError);
+			Element errorNumber = new Element("errorNumber", ns).setText(String.valueOf(errorCount));
+			Element e = new Element("error", ns);
+			e.addContent(errorType);
+			e.addContent(errorNumber);
+			e.addContent(m);
+			e.addContent(x);
+			xpaths.addContent(e);
+		}
+		
+		public void error( SAXParseException parseException ) throws SAXException {
+			addMessage( parseException, "ERROR" );
+		}
+
+		public void fatalError( SAXParseException parseException ) throws SAXException {
+			addMessage( parseException, "FATAL ERROR" );
+		}
+
+		public void warning( SAXParseException parseException ) throws SAXException {
+			addMessage( parseException, "WARNING" );
+		}
+
+		/**
+		 * Set namespace to use for report elements
+		 * @param ns
+		 */
+		public void setNs(Namespace ns) {
+			this.ns = ns;
+		}
+
+		public Namespace getNs() {
+			return ns;
+		}
+	}
+
+  public static void resetResolver() {
+    Resolver resolver = ResolverWrapper.getInstance();
+    resolver.reset();
+  }
 }
