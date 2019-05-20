@@ -112,7 +112,7 @@ public class XmlResolver extends XMLCatalogResolver {
 				try {
 					elResult = xml.execute();
 					addXmlToCache(externalRef.toString(), elResult);
-          logger.error("Retrieved: \n"+Xml.getString(elResult));
+          logger.debug("Retrieved: \n"+Xml.getString(elResult));
 				} catch (Exception e) {
 					logger.error("Request on "+externalRef+" failed.");
 					e.printStackTrace();
