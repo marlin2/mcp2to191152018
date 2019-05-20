@@ -13,6 +13,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /* Resolves system and public ids as well as URIs using oasis catalog
    as per XMLCatalogResolver, but goes further and retrieves any
 	 external references since we need to use config'd proxy details on 
@@ -22,6 +25,8 @@ import java.net.URL;
 public class XmlResolver extends XMLCatalogResolver {
    
 	public static final String XMLRESOLVER_JCS = "XmlResolver";
+
+  private final Logger logger = LogManager.getLogger("resolver");
 
     
 	//--------------------------------------------------------------------------
@@ -54,7 +59,7 @@ public class XmlResolver extends XMLCatalogResolver {
     */
    public LSInput resolveResource(String type, String namespaceURI, String publicId, String systemId, String baseURI) {
 
-     //System.out.println("XmlResolver: Before resolution: Type: "+type+" NamespaceURI :"+namespaceURI+" PublicId :"+publicId+" SystemId :"+systemId+" BaseURI:"+baseURI);
+     logger.debug("Before resolution: Type: "+type+" NamespaceURI :"+namespaceURI+" PublicId :"+publicId+" SystemId :"+systemId+" BaseURI:"+baseURI);
 
 		LSInput result = super.resolveResource(type, namespaceURI, publicId, systemId, baseURI);
 
@@ -64,7 +69,7 @@ public class XmlResolver extends XMLCatalogResolver {
 			baseURI  = result.getBaseURI();
 		}
 
-    //System.out.println("XmlResolver: After resolution: PublicId :"+publicId+" SystemId :"+systemId+" BaseURI:"+baseURI);
+    logger.debug("After resolution: PublicId :"+publicId+" SystemId :"+systemId+" BaseURI:"+baseURI);
 
 		URL externalRef = null;
 		try {
@@ -107,7 +112,7 @@ public class XmlResolver extends XMLCatalogResolver {
 				try {
 					elResult = xml.execute();
 					addXmlToCache(externalRef.toString(), elResult);
-          //System.out.println("Retrieved: \n"+Xml.getString(elResult));
+          logger.debug("Retrieved: \n"+Xml.getString(elResult));
 				} catch (Exception e) {
 					System.err.println("Request on "+externalRef+" failed.");
 					e.printStackTrace();
@@ -142,7 +147,7 @@ public class XmlResolver extends XMLCatalogResolver {
 		JeevesJCS xmlCache = JeevesJCS.getInstance(XMLRESOLVER_JCS);
 		Element cachedXml = (Element) xmlCache.get(uri.toLowerCase());
 		if (cachedXml == null) {
-			//System.out.println("Caching "+uri.toLowerCase());
+			logger.debug("Caching "+uri.toLowerCase());
 			xmlCache.put(uri.toLowerCase(), xml);
 		}
 	}
@@ -154,9 +159,9 @@ public class XmlResolver extends XMLCatalogResolver {
 		Element xml = (Element) xmlCache.get(uri.toLowerCase());
 
 		if (xml == null) {
-			System.out.println("cache MISS on "+uri.toLowerCase());
+			logger.error("cache MISS on "+uri.toLowerCase());
 		} else {
-			System.out.println("cache HIT on "+uri.toLowerCase());
+			logger.debug("cache HIT on "+uri.toLowerCase());
 		}
 		return xml;
 	}

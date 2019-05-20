@@ -39,6 +39,9 @@
       <plugin>
             <artifactId>maven-shade-plugin</artifactId>
             <version>2.1</version>
+            <configuration>
+              <!-- <minimizeJar>true</minimizeJar> -->
+            </configuration>
             <executions>
                 <execution>
                     <phase>package</phase>
@@ -89,7 +92,7 @@
     <dependency>
         <groupId>commons-logging</groupId>
         <artifactId>commons-logging</artifactId>
-        <version>1.0.4</version>
+        <version>1.2</version>
     </dependency>
     <dependency>
         <groupId>commons-httpclient</groupId>
@@ -136,6 +139,26 @@
         <artifactId>saxon-jdom</artifactId>
         <version>9.1.0.8b</version>
       </dependency>
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-core</artifactId>
+    <version>2.11.2</version>
+</dependency>
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-api</artifactId>
+    <version>2.11.2</version>
+</dependency>
+<!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-jcl -->
+<dependency>
+    <groupId>org.apache.logging.log4j</groupId>
+    <artifactId>log4j-jcl</artifactId>
+    <version>2.11.2</version>
+</dependency>
+
+
+
+
   </dependencies>
 
   <repositories>

@@ -28,6 +28,9 @@ import org.apache.xml.resolver.tools.CatalogResolver;
 
 import java.util.Vector;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 //=============================================================================
 
 /** Utility that handles the CatalogResolver and XmlResolver
@@ -44,10 +47,7 @@ public final class Resolver
 	 */
 	private String blankXSLFile;
 	
-	/** Active readers count */
-	private static int activeReaders = 0;
-	/** Active writers count */
-	private static int activeWriters = 0;
+  private Logger logger = LogManager.getLogger("resolver");
 
 	//--------------------------------------------------------------------------
 
@@ -63,7 +63,7 @@ public final class Resolver
 		catMan.setCatalogClassName("org.apache.xml.resolver.Catalog");
 		String catFiles = System.getProperty("XML_CATALOG_FILES");
 		if (catFiles == null) catFiles="";
-        System.out.println("Using oasis catalog files "+catFiles);
+        logger.info("Using oasis catalog files "+catFiles);
 
         setBlankXSLFile(System.getProperty("XML_CATALOG_BLANKXSLFILE"));
         
@@ -78,10 +78,10 @@ public final class Resolver
 		try {
 			iCatVerb = Integer.parseInt(catVerbosity);
 		} catch (NumberFormatException nfe) {
-			System.err.println("Failed to parse XML_CATALOG_VERBOSITY "+catVerbosity);
+			logger.error("Failed to parse XML_CATALOG_VERBOSITY "+catVerbosity);
 			nfe.printStackTrace();
 		}
-        System.out.println("Using catalog resolver verbosity "+iCatVerb);
+        logger.info("Using catalog resolver verbosity "+iCatVerb);
 		catMan.setVerbosity(iCatVerb);
 
 		catResolver = new CatalogResolver(catMan);

@@ -21,9 +21,14 @@ import au.csiro.mcp2to191152018.utils.Xml;
 import au.csiro.mcp2to191152018.utils.XmlResolver;
 import jeeves.JeevesJCS;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class Converter {
 
   public static void main( String args[] ){
+
+    final Logger logger = LogManager.getLogger("main");
 
     String schemaPath = "schemas/iso19115-3/src/main/plugin/iso19115-3/schema.xsd";
 
@@ -88,23 +93,23 @@ public class Converter {
           Element mdXml = Xml.loadFile(theFile);
 
           // transform
-			    System.out.println( "Transforming "+theFile.getName()+"...");
+			    logger.info( "Transforming "+theFile.getName()+"...");
           Element result = Xml.transform(mdXml, "schemas/iso19115-3/src/main/plugin/iso19115-3/convert/ISO19139/fromISO19139MCP2.xsl",  xsltparams);
 
-          //System.out.println("Result was \n"+Xml.getString(result));
+          //logger.info("Result was \n"+Xml.getString(result));
 
           // validate
           boolean xmlIsValid = true;
 
           if (cmd.hasOption("s")) {
-					  System.out.println("Validation is skipped.");
+					  logger.info("Validation is skipped.");
           } else {
-					  System.out.println("Validating '" + theFile.getName() + "' against http://schemas.isotc211.org/19115/-3/mdb/2.0 :" );
             try {
               //Xml.validate(schemaPath, result);
               Xml.validate(result);
             } catch (Exception e) {
-              System.out.println(e.getMessage());
+					    logger.error("Validation of '" + theFile.getName() + "' against http://schemas.isotc211.org/19115/-3/mdb/2.0 FAILED:" );
+              logger.error(e.getMessage());
               xmlIsValid = false;
             }
           }
