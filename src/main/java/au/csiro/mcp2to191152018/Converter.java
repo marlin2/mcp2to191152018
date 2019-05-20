@@ -17,8 +17,8 @@ import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 
-import au.csiro.mcp2to191152018.utils.Xml;
-import au.csiro.mcp2to191152018.utils.XmlResolver;
+import au.csiro.utils.Xml;
+import au.csiro.utils.XmlResolver;
 import jeeves.JeevesJCS;
 
 import org.apache.logging.log4j.LogManager;

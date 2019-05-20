@@ -17,7 +17,7 @@
  * OF LIABILITY, ARISING OUT OF THE USE OF OR INABILITY TO USE THIS SOFTWARE,
  * EVEN IF CSIRO HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
  */
-package au.csiro.mcp2to191152018.utils;
+package au.csiro.utils;
 
 import net.sf.saxon.Configuration;
 import net.sf.saxon.FeatureKeys;
@@ -326,7 +326,7 @@ public class Xml {
 			Element elem = (Element) so.getLocator().getNode();
 			Element x = new Element("xpath", ns);
 			try {
-				String xpath = au.csiro.mcp2to191152018.utils.XPath.getXPath(elem);
+				String xpath = au.csiro.utils.XPath.getXPath(elem);
 				//-- remove the first element to ensure XPath fits XML passed with
 				//-- root element
 				if (xpath.startsWith("/")) { 

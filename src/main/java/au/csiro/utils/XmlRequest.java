@@ -21,7 +21,7 @@
 //===	Rome - Italy. email: GeoNetwork@fao.org
 //==============================================================================
 
-package au.csiro.mcp2to191152018.utils;
+package au.csiro.utils;
 
 import org.apache.commons.httpclient.Cookie;
 import org.apache.commons.httpclient.Credentials;

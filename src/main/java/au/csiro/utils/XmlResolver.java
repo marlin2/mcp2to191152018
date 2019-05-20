@@ -1,4 +1,4 @@
-package au.csiro.mcp2to191152018.utils;
+package au.csiro.utils;
 
 import jeeves.JeevesJCS;
 import org.apache.jcs.access.exception.CacheException;
@@ -74,12 +74,12 @@ public class XmlResolver extends XMLCatalogResolver {
 		URL externalRef = null;
 		try {
 
-			if (publicId != null && publicId.startsWith("http://")) {
+			if (publicId != null && publicId.startsWith("http")) {
 				externalRef = new URL(publicId);
-			} else if (systemId != null && systemId.startsWith("http://")) {
+			} else if (systemId != null && systemId.startsWith("http")) {
 				externalRef = new URL(systemId);
 			} else if (systemId != null && baseURI != null) {
-				if (baseURI.startsWith("http://")) {
+				if (baseURI.startsWith("http")) {
 					URL ref = new URL(baseURI);
 					String thePath = new File(ref.getPath()).getParent().replace('\\','/');
 					externalRef = new URI(ref.getProtocol(), null, ref.getHost(), ref.getPort(), thePath + "/" + systemId, null, null).toURL();
@@ -112,16 +112,18 @@ public class XmlResolver extends XMLCatalogResolver {
 				try {
 					elResult = xml.execute();
 					addXmlToCache(externalRef.toString(), elResult);
-          logger.debug("Retrieved: \n"+Xml.getString(elResult));
+          logger.error("Retrieved: \n"+Xml.getString(elResult));
 				} catch (Exception e) {
-					System.err.println("Request on "+externalRef+" failed.");
+					logger.error("Request on "+externalRef+" failed.");
 					e.printStackTrace();
 				}
 
 			}
 
 			if (result == null) {
+        logger.error("Will try and get "+systemId);
 				result = new DOMInputImpl(publicId, systemId, baseURI);
+        logger.error("done");
 			}
 			if (elResult != null) {
 				result.setStringData(Xml.getString(elResult));
@@ -161,7 +163,7 @@ public class XmlResolver extends XMLCatalogResolver {
 		if (xml == null) {
 			logger.error("cache MISS on "+uri.toLowerCase());
 		} else {
-			logger.debug("cache HIT on "+uri.toLowerCase());
+			logger.error("cache HIT on "+uri.toLowerCase());
 		}
 		return xml;
 	}
