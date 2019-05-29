@@ -43,13 +43,13 @@ public class Converter {
 
     Options options = new Options();
     options.addOption("s", false, "Skip validation. Useful for debugging because reading the schemas takes some time.");
-    options.addRequiredOption("i", "directory", true, "Mandatory directory name for input xml files.");
-    options.addRequiredOption("o", "directory", true, "Mandatory directory name for output xml files.");
+    options.addRequiredOption("i", "input", true, "Mandatory input xml file name.");
+    options.addRequiredOption("o", "output", true, "Mandatory output xml file name.");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = null;
 
-    String header = "Convert mcp2 xml files to 19115-3\n\n";
+    String header = "Convert mcp2 xml to 19115-3\n\n";
  
     HelpFormatter formatter = new HelpFormatter();
 
@@ -60,36 +60,23 @@ public class Converter {
       System.exit(1);
     }
 
-		// Process input directory
+		// Process input file
 		String inpath = cmd.getOptionValue("i");
-    File indirectory = new File(inpath);
-    if (!indirectory.exists()) {
+    File theFile = new File(inpath);
+    if (!theFile.exists()) {
       formatter.printHelp("mcp2to191152018", header, options, null, true);
       System.exit(1);
     }
 
-		// Process output directory 
-		String path = cmd.getOptionValue("o");
-		// Append final separator character if not already suppled
-		if(!path.endsWith(File.separator)) path += File.separator;
-    File op = new File(path + "invalid");
-    // creates both output directory and invalid directory if they don't exist
-    op.mkdirs(); 
+		// Get output file name
+		String outputFile = cmd.getOptionValue("o");
 
     System.setProperty("XML_CATALOG_FILES", oasisCatalogFile);
     Xml.resetResolver();
 
-		// Fetch list of input files from input directory
-    File[] files = indirectory.listFiles(new FilenameFilter() {
-         public boolean accept(File dir, String name) {
-           return name.toLowerCase().endsWith(".xml");
-         }
-    }); 
     Map<String,String> xsltparams = new HashMap<String,String>();
 
-    for (int i = 0;i < files.length;i++) {
        try {
-          File theFile = files[i];
           Element mdXml = Xml.loadFile(theFile);
 
           // transform
@@ -115,11 +102,6 @@ public class Converter {
           }
 
           // output
-          String outputFile = path;
-          if (!xmlIsValid) {
-            outputFile += "invalid" + File.separator;
-          } 
-          outputFile += theFile.getName();
           XMLOutputter out = new XMLOutputter();
           Format f = Format.getPrettyFormat();  
           f.setEncoding("UTF-8");
@@ -133,7 +115,6 @@ public class Converter {
           e.printStackTrace();
 				}
          
-		} // for each dataset				
   }
 }
 	
