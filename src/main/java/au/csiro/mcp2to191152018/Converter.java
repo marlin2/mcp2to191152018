@@ -1,10 +1,16 @@
 package au.csiro.mcp2to191152018;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.FileOutputStream;
+import java.io.IOException;
 
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.jdom.Element;
@@ -43,13 +49,15 @@ public class Converter {
 
     Options options = new Options();
     options.addOption("s", false, "Skip validation. Useful for debugging because reading the schemas takes some time.");
-    options.addRequiredOption("i", "directory", true, "Mandatory directory name for input xml files.");
-    options.addRequiredOption("o", "directory", true, "Mandatory directory name for output xml files.");
+    options.addOption("d", "input_directory", true, "Directory name containing xml file name at some depth in the directory structure ");
+    options.addRequiredOption("i", "file_name", true, "Input xml file name.");
+    options.addRequiredOption("o", "output_file_name", true, "Output xml file name.");
 
     CommandLineParser parser = new DefaultParser();
     CommandLine cmd = null;
 
-    String header = "Convert mcp2 xml files to 19115-3\n\n";
+    String header = "Convert mcp2 xml files to 19115-3\n\n"+
+      "If the -d option is specified then the directory will be recursively searched for any file with the name specified by the -i option. The converted file will be created with the name specified by the -o option at the same level in the directory structure as the input file.";
  
     HelpFormatter formatter = new HelpFormatter();
 
@@ -61,42 +69,48 @@ public class Converter {
     }
 
 		// Process input directory
-		String inpath = cmd.getOptionValue("i");
-    File indirectory = new File(inpath);
-    if (!indirectory.exists()) {
-      formatter.printHelp("mcp2to191152018", header, options, null, true);
-      System.exit(1);
+		String inpath = null;
+    File indirectory = null;
+    if (cmd.hasOption("d")) {
+		  inpath = cmd.getOptionValue("d");
+      indirectory = new File(inpath);
+      if (!indirectory.exists()) {
+        formatter.printHelp("mcp2to191152018", header, options, null, true);
+        System.exit(1);
+      }
     }
 
-		// Process output directory 
-		String path = cmd.getOptionValue("o");
-		// Append final separator character if not already suppled
-		if(!path.endsWith(File.separator)) path += File.separator;
-    File op = new File(path + "invalid");
-    // creates both output directory and invalid directory if they don't exist
-    op.mkdirs(); 
+		// Process input file name 
+		String input = cmd.getOptionValue("i");
+
+		// Process output file name 
+		String output = cmd.getOptionValue("o");
 
     System.setProperty("XML_CATALOG_FILES", oasisCatalogFile);
     Xml.resetResolver();
 
 		// Fetch list of input files from input directory
-    File[] files = indirectory.listFiles(new FilenameFilter() {
-         public boolean accept(File dir, String name) {
-           return name.toLowerCase().endsWith(".xml");
-         }
-    }); 
+    List<Path> files = new ArrayList<Path>();
+    if (inpath != null) {
+      getFileNames(files, indirectory.toPath(), input);
+    } else {
+      files.add(new File(input).toPath());
+    }
+
     Map<String,String> xsltparams = new HashMap<String,String>();
 
-    for (int i = 0;i < files.length;i++) {
+    int invalid = 0;
+    for (Path file : files) {
        try {
-          File theFile = files[i];
+			    if (inpath != null) logger.debug(file.getParent()+"...");
+          File theFile = file.toFile();
           Element mdXml = Xml.loadFile(theFile);
 
           // transform
-			    logger.info( "Transforming "+theFile.getName()+"...");
+			    logger.debug( "Transforming "+theFile.getName()+"...");
           Element result = Xml.transform(mdXml, "schemas/iso19115-3/src/main/plugin/iso19115-3/convert/ISO19139/fromISO19139MCP2.xsl",  xsltparams);
 
-          //logger.info("Result was \n"+Xml.getString(result));
+          //logger.debug("Result was \n"+Xml.getString(result));
 
           // validate
           boolean xmlIsValid = true;
@@ -108,18 +122,20 @@ public class Converter {
               //Xml.validate(schemaPath, result);
               Xml.validate(result);
             } catch (Exception e) {
+              invalid++;
+			        if (inpath != null) logger.error("In "+file.getParent()+"...");
 					    logger.error("Validation of '" + theFile.getName() + "' against http://schemas.isotc211.org/19115/-3/mdb/2.0 FAILED:" );
               logger.error(e.getMessage());
               xmlIsValid = false;
             }
           }
 
-          // output
-          String outputFile = path;
-          if (!xmlIsValid) {
-            outputFile += "invalid" + File.separator;
-          } 
-          outputFile += theFile.getName();
+          // output file name is either that directly specified by output or 
+          // the output file in the same directory as the input file
+          String outputFile = output;
+          if (inpath != null) {
+           outputFile = file.getParent() + File.separator + output;  
+          }
           XMLOutputter out = new XMLOutputter();
           Format f = Format.getPrettyFormat();  
           f.setEncoding("UTF-8");
@@ -132,8 +148,31 @@ public class Converter {
 				} catch( Exception e ) { 
           e.printStackTrace();
 				}
+
+		} // for each path				
+    logger.info("Total records: "+files.size()+" INVALID: "+invalid);
          
-		} // for each dataset				
+  }
+
+  // From: https://stackoverflow.com/questions/2534632/list-all-files-from-a-directory-recursively-with-java
+  private static List<Path> getFileNames(List<Path> fileNames, Path dir, String infile) {
+    try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+        for (Path path : stream) {
+            if(path.toFile().isDirectory()) {
+                getFileNames(fileNames, path, infile);
+            } else {
+                // only add filenames that match infile
+                boolean theTest = path.getFileName().toString().equals(infile);
+                if (theTest) {
+                  //fileNames.add(path.toAbsolutePath().toString());
+                  fileNames.add(path);
+                }
+            }
+        }
+    } catch(IOException e) {
+        e.printStackTrace();
+    }
+    return fileNames;
   }
 }
 	
