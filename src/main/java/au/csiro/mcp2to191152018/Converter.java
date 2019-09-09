@@ -4,9 +4,13 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
+import java.net.URISyntaxException;
+
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+
+import java.security.CodeSource;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -36,12 +40,22 @@ public class Converter {
 
     final Logger logger = LogManager.getLogger("main");
 
-    String schemaPath = "schemas/iso19115-3/src/main/plugin/iso19115-3/schema.xsd";
+    CodeSource codeSource = Converter.class.getProtectionDomain().getCodeSource();
+    String jarDir = "";
+    try {
+      File jarFile = new File(codeSource.getLocation().toURI().getPath());
+      jarDir = jarFile.getParentFile().getParentFile().getPath();
+    } catch (URISyntaxException ue) {
+      System.err.println("Failed to get directory of jar");
+      System.exit(1);
+    }
 
-    String oasisCatalogFile = "schemas/iso19115-3/src/main/plugin/iso19115-3/oasis-catalog.xml";
+    String schemaPath = jarDir + "/" + "schemas/iso19115-3/src/main/plugin/iso19115-3/schema.xsd";
+
+    String oasisCatalogFile = jarDir + "/" + "schemas/iso19115-3/src/main/plugin/iso19115-3/oasis-catalog.xml";
 
     try {
-      JeevesJCS.setConfigFilename("src/main/config/cache.ccf");
+      JeevesJCS.setConfigFilename(jarDir + "/" + "src/main/config/cache.ccf");
       JeevesJCS.getInstance(XmlResolver.XMLRESOLVER_JCS);
     } catch (Exception ce) {
       System.err.println("Failed to create cache for schema files");
@@ -108,7 +122,7 @@ public class Converter {
 
           // transform
 			    logger.debug( "Transforming "+theFile.getName()+"...");
-          Element result = Xml.transform(mdXml, "schemas/iso19115-3/src/main/plugin/iso19115-3/convert/ISO19139/fromISO19139MCP2.xsl",  xsltparams);
+          Element result = Xml.transform(mdXml, jarDir + "/" + "schemas/iso19115-3/src/main/plugin/iso19115-3/convert/ISO19139/fromISO19139MCP2.xsl",  xsltparams);
 
           //logger.debug("Result was \n"+Xml.getString(result));
 
