@@ -19,7 +19,7 @@ do
      if [ $isMCP -eq "1" ]
      then
        echo $i
-       sed -i s/iso19139.mcp/iso19115-3/ $i/info.xml
+       sed s/iso19139.mcp/iso19115-3/ $i/info.xml > $i/info.xml.19115-3
        java -jar saxon.jar -s $i/metadata/metadata.xml -o $i/metadata/metadata.xml.new convert.xsl machine=$2
      else 
        echo rm -rf $i
@@ -28,4 +28,18 @@ do
   fi
 done
 java -jar target/mcp2to191152018-1.1.jar -d $1 -i metadata.xml.new -o metadata.xml.19115-3
+
+echo "Ready to put the -3 metadata in place?"
+select yn in "Yes" "No"; do
+    case $yn in
+        Yes ) for i in $1/*
+              do
+                mv $i/metadata/metadata.xml.19115-3 $i/metadata/metadata.xml
+                mv $i/info.xml.19115-3 $i/info.xml
+                rm -f $i/metadata/metadata.xml.new $i/metadata/metadata.iso19139.xml
+              done
+             break;;
+        No ) exit;;
+    esac
+done
 
