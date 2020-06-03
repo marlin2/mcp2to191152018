@@ -66,9 +66,8 @@
           gmd:parentIdentifier|
           gmd:hierarchyLevel|
           gmd:hierarchyLevelName"/>
-      <xsl:call-template name="addIDCContact"/>
-      <xsl:apply-templates select="
-          gmd:dateStamp"/>
+      <!-- Skip any gmd:contact here as it is usually just wrong or not a fragment! -->
+      <xsl:apply-templates select="gmd:dateStamp"/>
       <gmd:metadataStandardName>
        <gco:CharacterString>Australian Marine Community Profile of ISO 19115:2005/19139</gco:CharacterString>
       </gmd:metadataStandardName>
@@ -97,7 +96,10 @@
        <!-- all the rest - usually mcp stuff -->
        <xsl:apply-templates select="
         *[namespace-uri()!='http://www.isotc211.org/2005/gmd' and
-          namespace-uri()!='http://www.isotc211.org/2005/srv']"/>
+          namespace-uri()!='http://www.isotc211.org/2005/srv' and 
+          name()!='mcp:metadataContactInfo']"/>
+       <xsl:apply-templates select="oldmcp:metadataContactInfo[*//gmd:CI_RoleCode='processor' or *//gmd:CI_RoleCode='originator']"/>
+       <xsl:call-template name="addIDCContact"/>
     </xsl:element>
   </xsl:template>
 
@@ -365,38 +367,15 @@
 	<!-- ================================================================= -->
 
   <xsl:template name="addIDCContact">
-    <xsl:variable name="org" select="$idcContact//*:name/gco:CharacterString"/>
-    <xsl:element name="gmd:contact">
-      <xsl:element name="gmd:CI_ResponsibleParty">
-        <xsl:element name="gmd:organisationName"><gco:CharacterString><xsl:value-of select="$org"/></gco:CharacterString></xsl:element>
-        <xsl:element name="gmd:positionName"><gco:CharacterString><xsl:value-of select="$idcContact//*:positionName/gco:CharacterString"/></gco:CharacterString></xsl:element>
-        <xsl:element name="gmd:contactInfo">
-          <xsl:element name="gmd:CI_Contact">
-            <xsl:copy-of select="$idcContact//*:contactInfo/gmd:CI_Contact/gmd:address" copy-namespaces="no"/>
-            <gmd:onlineResource>
-              <gmd:CI_OnlineResource>
-                <gmd:linkage>
-                  <gmd:URL>https://research.csiro.au/oa-idc/</gmd:URL>
-                </gmd:linkage>
-                <gmd:protocol>
-                  <gco:CharacterString>WWW:LINK-1.0-http--link</gco:CharacterString>
-                </gmd:protocol>
-                <gmd:name>
-                  <gco:CharacterString><xsl:value-of select="concat($org,' homepage')"/></gco:CharacterString>
-                </gmd:name>
-                <gmd:description>
-                  <gco:CharacterString><xsl:value-of select="concat('Link to ',$org,' homepage')"/></gco:CharacterString>
-                </gmd:description>
-              </gmd:CI_OnlineResource>
-            </gmd:onlineResource>
-          </xsl:element>
-        </xsl:element>
-        <gmd:role>
-          <gmd:CI_RoleCode codeList="http://schemas.aodn.org.au/mcp-2.0/schema/resources/Codelist/gmxCodelists.xml#CI_RoleCode"
-                             codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
-        </gmd:role>
-      </xsl:element>
-    </xsl:element>
+    <xsl:message>Adding IDC as metadata point of contact</xsl:message>
+    <mcp:metadataContactInfo>
+      <mcp:CI_Responsibility>
+        <mcp:role>
+          <gmd:CI_RoleCode codeList="http://schemas.aodn.org.au/mcp-2.0/schema/resources/Codelist/gmxCodelists.xml#CI_RoleCode" codeListValue="pointOfContact">pointOfContact</gmd:CI_RoleCode>
+        </mcp:role>
+        <mcp:party xlink:href="local://xml.metadata.get?uuid=urn:marlin.csiro.au:person:125_person_organisation" />
+      </mcp:CI_Responsibility>
+    </mcp:metadataContactInfo>
   </xsl:template>
 
 	<!-- ================================================================= -->
