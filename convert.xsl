@@ -408,7 +408,16 @@
   <!-- Remove dq report pass/fail - not used or valid in marlin -->
 
   <xsl:template match="gmd:pass[ancestor::gmd:report]">
-    <gmd:pass gco:nilReason='inapplicable'/>
+    <xsl:choose>
+      <xsl:when test="gco:Boolean and normalize-space(gco:Boolean)!=''">
+        <gmd:pass>
+          <xsl:copy-of select="gco:Boolean" copy-namespaces="no"/>
+        </gmd:pass>
+      </xsl:when> 
+      <xsl:otherwise>
+        <gmd:pass gco:nilReason='inapplicable'/>
+      </xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
 	<!-- ================================================================= -->
