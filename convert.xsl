@@ -399,12 +399,17 @@
   </xsl:template>
 
   <!-- Replace file.disclaimer links -->
-  <xsl:template match="gmd:URL[contains(.,'file.disclaimer')]">
+  <xsl:template match="gmd:onLine[descendant::gmd:URL[contains(.,'file.disclaimer')]]">
     <xsl:if test="//gmd:fileIdentifier/gco:CharacterString=('17d840a5-b6b7-48e2-a397-378f1e3e132f','545f5806-a1d8-41c7-8fa6-f631261ad831','83473e18-3228-4c42-a9c8-fe13fadb351f')">
-	    <xsl:variable name="after" select="substring-after(.,'file.disclaimer')"/>
+	    <xsl:variable name="after" select="substring-after(descendant::gmd:URL,'file.disclaimer')"/>
       <xsl:message>FOUND RECORD with valid file.disclaimer</xsl:message>
       <xsl:copy copy-namespaces="no">
-        <xsl:value-of select="concat($machine,'/geonetwork/srv/eng/resources.get',$after)"/>  
+        <gmd:CI_OnlineResource>
+          <gmd:linkage>
+            <gmd:URL><xsl:value-of select="concat($machine,'/geonetwork/srv/eng/resources.get',$after)"/></gmd:URL>
+          </gmd:linkage>
+          <xsl:copy-of select="gmd:CI_OnlineResource/*[name()!='gmd:linkage']" copy-namespaces="no"/>
+        </gmd:CI_OnlineResource>
       </xsl:copy>
     </xsl:if> 
   </xsl:template>
